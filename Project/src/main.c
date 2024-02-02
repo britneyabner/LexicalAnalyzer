@@ -6,76 +6,67 @@ int main()
     return 0;
 }
 
-typedef enum
-{
-    Range_Seperator,
-    ASSIGN,
-    LCURLY,
-    RCURLY,
-    COMMA,
-    LPAREN,
-    RPAREN,
-    TypeRef,
-    Identifier,
-    Number,
-} token_type;
+struct state;
+typedef void state_function(struct state *);
 
-typedef struct
+struct state
 {
-    token_type token_type;
-    char lexeme[];
-} token;
+    state_function * next;
+    char input;
+};
 
-typedef enum 
+state_function state_start, state_T, state_TA, state_TAG, state_TAGS,
+                state_B, state_BE, state_BEG, state_BEGI, state_BEGIN,
+                state_S,
+                state_I,
+                state_D,
+                state_E;
+void state_start(struct state * current)
 {
-    T,
-    TA,
-    TAG,
-    TAGS,
-} reserved_word_tags;
+    switch(current->input)
+    {
+        case 'T':
+            {
+                current->next = state_T;
+                break;
+            }
+        case 'B':
+            {
+                current->next = state_B;
+                break;
+            }
+        case 'S':
+            {
+                current->next = state_S;
+                break;
+            }
+        case 'I':
+            {
+                current->next = state_I;
+                break;
+            }
+        case 'D':
+            {
+                current->next = state_D;
+                break;
+            }
+        case 'E':
+            {
+                current->next = state_E;
+                break;
+            }
+    }
+}
 
-typedef enum
-{
-    B,
-    BE,
-    BEG,
-    BEGI,
-    BEGIN,
-} reserved_word_begin;
-
-typedef enum 
-{
-    S,
-    SE,
-    SEQ,
-    SEQU,
-    SEQUE,
-    SEQUENC,
-    SEQUENCE,
-} reserved_word_sequence;
-
-typedef enum
-{
-    I,
-    IN,
-    INT,
-    INTE,
-    INTEG,
-    INTEGE,
-    INTEGER,
-} reserved_word_integer;
-
-typedef enum
-{
-    D,
-    DA,
-    DAT,
-    DATE,
-} reserved_word_date;
-
-typedef enum
-{
-    E,
-    EN,
-    END,
-} reserved_word_end;
+void state_T(struct state * current)
+{}
+void state_B(struct state * current)
+{}
+void state_S(struct state * current)
+{}
+void state_I(struct state * current)
+{}
+void state_D(struct state * current)
+{}
+void state_E(struct state * current)
+{}
