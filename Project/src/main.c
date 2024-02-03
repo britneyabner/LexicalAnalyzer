@@ -7,67 +7,70 @@ int main()
     return 0;
 }
 
-struct state;
-typedef void state_function(struct state *);
+#define NUM_STATES 46
+#define NUM_INPUTS 128
 
-struct state
-{
-    state_function * next;
+struct state;
+typedef void state_func(struct state *);
+
+state_func
+    START, // 0
+    T, TA, TAG, TAGS, // 2 ... 10
+    B, BE, BEG, BEGI, BEGIN, // 6 ... 10
+    S, SE, SEQ, SEQU, SEQUE, SEQUEN, SEQUENC, SEQUENCE, // 11 ... 18
+    I, IN, INT, INTE, INTEG, INEGE, INTEGER, // 19 ... 25
+    D, DA, DAT, DATE, // 26 ... 29
+    E, EN, END, // 30 ... 32
+    TypeRef, // 33
+    Identifier, // 34
+    Number, // 35
+    ASSIGN_ONE, ASSIGN_TWO, ASSIGN_THREE, // 36 ... 38
+    Range_Separator_ONE, Range_Separator_TWO, // 39, 40
+    LCURLY, RCURLY, COMMA, LPAREN, RPAREN; // 41 ... 45
+
+struct state {
+    state_func * func;
     char input;
+    char value[];
 };
 
-state_function state_start, state_T, state_TA, state_TAG, state_TAGS,
-                state_B, state_BE, state_BEG, state_BEGI, state_BEGIN,
-                state_S,
-                state_I,
-                state_D,
-                state_E,
-                state_type_reference,
-                state_identifier,
-                state_number,
-                state_assignment_one,
-                state_range_separator;
-
-void state_start(struct state * current)
-{
-    switch(current->input)
-    {
-        // check for whitespace character
-        case 0x09 ... 0x0d: // the GCC compiler allows for checking ranges 
-                            // using '...'
+void START(struct state * current) {
+    switch(current->input) {
+        // whitespace
+        case 0x09 ... 0x0d:
         case 0x20:
             {
-                current->next = state_start;
+                break;
             }
         // check for possible reserved words
         case 'T':
             {
-                current->next = state_T;
+                current->func = T;
                 break;
             }
         case 'B':
             {
-                current->next = state_B;
+                current->func = B;
                 break;
             }
         case 'S':
             {
-                current->next = state_S;
+                current->func = S;
                 break;
             }
         case 'I':
             {
-                current->next = state_I;
+                current->func = I;
                 break;
             }
         case 'D':
             {
-                current->next = state_D;
+                current->func = D;
                 break;
             }
         case 'E':
             {
-                current->next = state_E;
+                current->func = E;
                 break;
             }
         // type references start with a capital letter
@@ -77,35 +80,56 @@ void state_start(struct state * current)
         case 'J' ... 'R':
         case 'U' ... 'Z':
             {
-                current->next = state_type_reference;
+                current->func = TypeRef;
                 break;
             }
         // identifiers start with a lowercase letter
         case 'a' ... 'z':
             {
-                current->next = state_identifier;
+                current->func = Identifier;
                 break;
             }
         // numbers start with a non 0 number character
         case '1' ... '9':
             {
-                current->next = state_number;
+                current->func = Number;
                 break;
             }
         // assignment starts with a colon
         case ':':
             {
-                current->next = state_assignment_one;
+                current->func= ASSIGN_ONE;
                 break;
             }
-        // range separators
+        // range separator
+        case '.':
+            {
+                current->func = Range_Separator_ONE;
+                break;
+            }
         case '{':
+            {
+                current->func = LCURLY;
+                break;
+            }
         case '}':
+            {
+                current->func = RCURLY;
+                break;
+            }
         case ',':
+            {
+                current->func = COMMA;
+                break;
+            }
         case '(':
+            {
+                current->func = LPAREN;
+                break;
+            }
         case ')':
             {
-                current->next = state_range_separator;
+                current->func = RPAREN;
                 break;
             }
         default:
@@ -115,25 +139,47 @@ void state_start(struct state * current)
     }
 }
 
-void state_T(struct state * current)
-{}
-void state_B(struct state * current)
-{}
-void state_S(struct state * current)
-{}
-void state_I(struct state * current)
-{}
-void state_D(struct state * current)
-{}
-void state_E(struct state * current)
-{}
-void state_type_reference(struct state * current)
-{}
-void state_identifier(struct state * current)
-{}
-void state_number(struct state * current)
-{}
-void state_assignment_one(struct state * current)
-{}
-void state_range_separator(struct state * current)
-{}
+void T(struct state * current) {}
+void TA(struct state * current) {}
+void TAG(struct state * current) {}
+void TAGS(struct state * current) {}
+void B(struct state * current) {}
+void BE(struct state * current) {}
+void BEG(struct state * current) {}
+void BEGI(struct state * current) {}
+void BEGIN(struct state * current) {}
+void S(struct state * current) {}
+void SE(struct state * current) {}
+void SEQ(struct state * current) {}
+void SEQE(struct state * current) {}
+void SEQUE(struct state * current) {}
+void SEQUEN(struct state * current) {}
+void SEQUENC(struct state * current) {}
+void SEQUENCE(struct state * current) {}
+void I(struct state * current) {}
+void IN(struct state * current) {}
+void INT(struct state * current) {}
+void INTE(struct state * current) {}
+void INTEG(struct state * current) {}
+void INTEGE(struct state * current) {}
+void INTEGER(struct state * current) {}
+void D(struct state * current) {}
+void DA(struct state * current) {}
+void DAT(struct state * current) {}
+void DATE(struct state * current) {}
+void E(struct state * current) {}
+void EN(struct state * current) {}
+void END(struct state * current) {}
+void TypeRef(struct state * current) {}
+void Identifier(struct state * current) {}
+void Number(struct state * current) {}
+void ASSIGN_ONE(struct state * current) {}
+void ASSIGN_TWO(struct state * current) {}
+void ASSIGN_THREE(struct state * current) {}
+void Range_Separator_ONE(struct state * current) {}
+void Range_Separator_TWO(struct state * current) {}
+void LCURLY(struct state * current) {}
+void RCURLY(struct state * current) {}
+void COMMA(struct state * current) {}
+void LPAREN(struct state * current) {}
+void RPAREN(struct state * current) {}
