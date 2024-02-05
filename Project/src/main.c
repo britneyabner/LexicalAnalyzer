@@ -7,249 +7,95 @@ int main()
     return 0;
 }
 
-#define NUM_STATES 46
-#define NUM_INPUTS 128
+
+#define NUM_STATES 49
 
 struct state;
-typedef void state_func(struct state *);
+enum input_type;
+typedef void state_type(struct state *);
 
-state_func
+enum input_type get_type(char input);
+
+typedef enum input_type {
+    whitespace,
+    uppercase,
+    lowercase,
+    digit,
+    hyphen,
+    colon,
+    equals,
+    period,
+    lcurly,
+    rcurly,
+    comma,
+    lparen,
+    rparen,
+} input_type;
+
+// state_type points to a function that handles transitions for each state
+state_type
     START, // 0
     T, TA, TAG, TAGS, // 2 ... 10
     B, BE, BEG, BEGI, BEGIN, // 6 ... 10
     S, SE, SEQ, SEQU, SEQUE, SEQUEN, SEQUENC, SEQUENCE, // 11 ... 18
-    I, IN, INT, INTE, INTEG, INEGE, INTEGER, // 19 ... 25
+    I, IN, INT, INTE, INTEG, INTEGE, INTEGER, // 19 ... 25
     D, DA, DAT, DATE, // 26 ... 29
     E, EN, END, // 30 ... 32
-    TypeRef, // 33
-    Identifier, // 34
-    Number, // 35
-    ASSIGN_ONE, ASSIGN_TWO, ASSIGN_THREE, // 36 ... 38
-    Range_Separator_ONE, Range_Separator_TWO, // 39, 40
-    LCURLY, RCURLY, COMMA, LPAREN, RPAREN; // 41 ... 45
+    TypeRef, TypeRef_one_hyphen, TypeRef_two_hyphen, // 33, 34, 35
+    Identifier, Identifier_one_hyphen, Identifier_two_hyphen, // 36, 37, 38
+    Number, Zero, // 39, 40
+    ASSIGN_ONE, ASSIGN_TWO, ASSIGN_THREE, // 41 ... 43
+    Range_Separator_ONE, Range_Separator_TWO, // 44, 45
+    LCURLY, RCURLY, COMMA, LPAREN, RPAREN; // 46 ... 50
 
-struct state {
-    state_func * func;
+typedef struct state {
+    state_type  * state_type;
+    enum input_type input_type;
     char input;
     char value[];
-};
+} state;
 
-void START(struct state * current) {
-    switch(current->input) {
-        // whitespace
+input_type get_input_type(char input) {
+    switch(input) {
         case 0x09 ... 0x0d:
         case 0x20:
-            {
-
+                return whitespace;
                 break;
-            }
-        // check for possible reserved words
-        case 'T':
-            {
-                current->func = T;
-                break;
-            }
-        case 'B':
-            {
-                current->func = B;
-                break;
-            }
-        case 'S':
-            {
-                current->func = S;
-                break;
-            }
-        case 'I':
-            {
-                current->func = I;
-                break;
-            }
-        case 'D':
-            {
-                current->func = D;
-                break;
-            }
-        case 'E':
-            {
-                current->func = E;
-                break;
-            }
-        // type references start with a capital letter
-        case 'A':
-        case 'C':
-        case 'F' ... 'H':
-        case 'J' ... 'R':
-        case 'U' ... 'Z':
-            {
-                current->func = TypeRef;
-                break;
-            }
-        // identifiers start with a lowercase letter
-        case 'a' ... 'z':
-            {
-                current->func = Identifier;
-                break;
-            }
-        // numbers start with a non 0 number character
-        case '1' ... '9':
-            {
-                current->func = Number;
-                break;
-            }
-        // assignment starts with a colon
-        case ':':
-            {
-                current->func= ASSIGN_ONE;
-                break;
-            }
-        // range separator
-        case '.':
-            {
-                current->func = Range_Separator_ONE;
-                break;
-            }
-        case '{':
-            {
-                current->func = LCURLY;
-                break;
-            }
-        case '}':
-            {
-                current->func = RCURLY;
-                break;
-            }
-        case ',':
-            {
-                current->func = COMMA;
-                break;
-            }
-        case '(':
-            {
-                current->func = LPAREN;
-                break;
-            }
-        case ')':
-            {
-                current->func = RPAREN;
-                break;
-            }
-        default:
-            {
-                // TODO: error handling
-            }
-    }
-}
-
-void T(struct state * current) {
-    switch(current->input) {
-        case 0x09 ... 0x0d:
-        case 0x20:
-            {
-                current->func = START;
-                break;
-            }
-        case 'A':
-            {
-                current->func = TA;
-                break;
-            }
-        case 'B' ... 'Z':
-        case 'a' ... 'z':
-        case '-':
-            {
-                current->func = TypeRef;
-                break;
-            }
-        default:
-            {
-            // TODO: error
-            }
-    }
-}
-
-void TA(struct state * current) {
-    switch(current->input) {
-        case 0x09 ... 0x0d:
-        case 0x20:
-            {
-                current->func = START;
-                break;
-            }
-        case 'G':
-            {
-                current->func = TAG;
-                break;
-            }
-        case 'A' ... 'F':
-        case 'H' ... 'Z':
-        case 'a' ... 'z':
-            {
-                current->func = TypeRef;
-                break;
-            }
-        case '-':
-            {
-                current->func = TypeRef;
-                break;
-            }
-        default:
-            {
-                // TODO: error
-            }
-    }
-}
-
-void TAG(struct state * current) {
-    switch(current->input) {
-        case 0x09 ... 0x0d:
-        case 0x20:
-            {
-                current->func = START;
-                break;
-            }
-        case 'S':
-            {
-                current->func = TAGS;
-                break;
-            }
-        case 'A' ... 'R':
-        case 'T' ... 'Z':
-        case 'a' ... 'z':
-            {
-                current->func = TypeRef;
-                break;
-            }
-        case '-':
-            {
-                current->func = TypeRef;
-                break;
-            }
-        default:
-            {
-                // TODO: error
-            }
-    }
-}
-
-void TAGS(struct state * current) {
-    switch(current->input) {
-        case 0x09 ... 0x0d:
-        case 0x20:
-            {
-                current->func = START;
-                break;
-            }
         case 'A' ... 'Z':
+                return uppercase;
+                break;
         case 'a' ... 'z':
             {
-                current->func = TypeRef;
+                return lowercase;
                 break;
             }
-        case '-':
-            {
-                current->func = TypeRef;
-                break;
-            }
+        case '0' ... '9':
+            return digit;
+            break;
+        case ':':
+            return colon;
+            break;
+        case '=':
+            return equals;
+            break;
+        case '.':
+            return period;
+            break;
+        case '{':
+            return lcurly;
+            break;
+        case '}':
+            return rcurly;
+            break;
+        case ',':
+            return comma;
+            break;
+        case '(':
+            return lparen;
+            break;
+        case ')':
+            return rparen;
+            break;
         default:
             {
                 // TODO: error
@@ -257,73 +103,1318 @@ void TAGS(struct state * current) {
     }
 }
 
-void B(struct state * current) {
-    switch(current->input){
-        case 'E':
+void START(state * state) {
+    switch(state->input_type) {
+        case whitespace:
             {
-                current->func = BE;
+                state->state_type = START;
+            }
+        case uppercase:
+            {
+                switch(state->input) {
+                    case 'T':
+                        {
+                            state->state_type = T;
+                            break;
+                        }
+                    case 'B':
+                        {
+                            state->state_type = B;
+                            break;
+                        }
+                    case 'S':
+                        {
+                            state->state_type = S;
+                            break;
+                        }
+                    case 'I':
+                        {
+                            state->state_type = I;
+                            break;
+                        }
+                    case 'D':
+                        {
+                            state->state_type = D;
+                            break;
+                        }
+                    case 'E':
+                        {
+                            state->state_type = E;
+                            break;
+                        }
+                    default:
+                        {
+                            state->state_type = TypeRef;
+                            break;
+                        }
+                }
+            }
+        case lowercase:
+            {
+                state->state_type = Identifier;
                 break;
             }
-        case 'A' ... 'D':
-        case 'F' ... 'Z':
+        case digit:
             {
-                current->func = TypeRef;
+                if(state->input == 0) {
+                    state->state_type = Zero;
+                    break;
+                }
+                state->state_type = Number;
                 break;
             }
-        case '-':
+        case lcurly:
             {
-                current->func = TypeRef;
+                state->state_type = LCURLY;
                 break;
             }
-        case 0x09 ... 0x0d:
-        case 0x20:
+        case rcurly:
             {
-                current->func = START;
+                state->state_type = RCURLY;
+                break;
+            }
+        case comma:
+            {
+                state->state_type = COMMA;
+                break;
+            }
+        case rparen:
+            {
+                state->state_type = RPAREN;
+                break;
+            }
+        case lparen:
+            {
+                state->state_type = LPAREN;
                 break;
             }
         default:
+            {
+                //TODO: error
+            }
+    }
+}
+
+void T (state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if (state->input == 'A') {
+                    state->state_type = TA;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default: 
             {
                 // TODO: error
             }
     }
 }
 
-void BE(struct state * current) {}
-void BEG(struct state * current) {}
-void BEGI(struct state * current) {}
-void BEGIN(struct state * current) {}
-void S(struct state * current) {}
-void SE(struct state * current) {}
-void SEQ(struct state * current) {}
-void SEQE(struct state * current) {}
-void SEQUE(struct state * current) {}
-void SEQUEN(struct state * current) {}
-void SEQUENC(struct state * current) {}
-void SEQUENCE(struct state * current) {}
-void I(struct state * current) {}
-void IN(struct state * current) {}
-void INT(struct state * current) {}
-void INTE(struct state * current) {}
-void INTEG(struct state * current) {}
-void INTEGE(struct state * current) {}
-void INTEGER(struct state * current) {}
-void D(struct state * current) {}
-void DA(struct state * current) {}
-void DAT(struct state * current) {}
-void DATE(struct state * current) {}
-void E(struct state * current) {}
-void EN(struct state * current) {}
-void END(struct state * current) {}
-void TypeRef(struct state * current) {}
-void Identifier(struct state * current) {}
-void Number(struct state * current) {}
-void ASSIGN_ONE(struct state * current) {}
-void ASSIGN_TWO(struct state * current) {}
-void ASSIGN_THREE(struct state * current) {}
-void Range_Separator_ONE(struct state * current) {}
-void Range_Separator_TWO(struct state * current) {}
-void LCURLY(struct state * current) {}
-void RCURLY(struct state * current) {}
-void COMMA(struct state * current) {}
-void LPAREN(struct state * current) {}
-void RPAREN(struct state * current) {}
+void TA(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if (state->input == 'G') {
+                    state->state_type = TAG;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void TAG(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if(state->input == 'S') {
+                    state->state_type = TAGS;
+                    break;
+                }
+                state->state_type = TypeRef;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void TAGS(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        case uppercase:
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void B(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if(state->input == 'E' ) {
+                    state->state_type = BE;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void BE(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if(state->input == 'G' ) {
+                    state->state_type = BEG;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void BEG(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if(state->input == 'I' ) {
+                    state->state_type = BEGI;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+void BEGI(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if(state->input == 'N' ) {
+                    state->state_type = BEGIN;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void BEGIN(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void S(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if(state->input == 'E' ) {
+                    state->state_type = SE;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void SE(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if(state->input == 'Q' ) {
+                    state->state_type = SEQ;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void SEQ(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if(state->input == 'U' ) {
+                    state->state_type = SEQU;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void SEQU(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if(state->input == 'E' ) {
+                    state->state_type = SEQUE;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void SEQUE(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if(state->input == 'N' ) {
+                    state->state_type = SEQUEN;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void SEQUEN(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if(state->input == 'C' ) {
+                    state->state_type = SEQUENCE;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+
+void SEQUENC(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if(state->input == 'E' ) {
+                    state->state_type = SEQUENCE;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+
+void SEQUENCE(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+
+void I(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if(state->input == 'N' ) {
+                    state->state_type = IN;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void IN(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if(state->input == 'T' ) {
+                    state->state_type = INT;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void INT(struct state * state) {
+switch(get_input_type(state->input)) {
+    case uppercase:
+        {
+            if(state->input == 'E' ) {
+                state->state_type = INTE;
+                break;
+            }
+            state->state_type = TypeRef;
+            break;
+        }
+    case lowercase:
+    case digit:
+        {
+            state->state_type = TypeRef;
+            break;
+        }
+    case hyphen:
+        {
+            state->state_type = TypeRef_one_hyphen;
+            break;
+        }
+    case whitespace:
+        {
+            state->state_type = START;
+            break;
+        }
+    default:
+        {}
+    }
+}
+
+void INTE(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if(state->input == 'G' ) {
+                    state->state_type = INTEG;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void INTEG(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if(state->input == 'E' ) {
+                    state->state_type = INTEGE;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void INTEGE(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if(state->input == 'R' ) {
+                    state->state_type = INTEGER;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void INTEGER(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void D(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if(state->input == 'A' ) {
+                    state->state_type = DA;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void DA(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if(state->input == 'T' ) {
+                    state->state_type = DAT;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void DAT(struct state * state) {
+switch(get_input_type(state->input)) {
+    case uppercase:
+        {
+            if(state->input == 'E' ) {
+                state->state_type = DATE;
+                break;
+            }
+            state->state_type = TypeRef;
+            break;
+        }
+    case lowercase:
+    case digit:
+        {
+            state->state_type = TypeRef;
+            break;
+        }
+    case hyphen:
+        {
+            state->state_type = TypeRef_one_hyphen;
+            break;
+        }
+    case whitespace:
+        {
+            state->state_type = START;
+            break;
+        }
+    default:
+        {}
+    }
+}
+
+void DATE(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void E(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if(state->input == 'N' ) {
+                    state->state_type = EN;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void EN(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+            {
+                if(state->input == 'D' ) {
+                    state->state_type = END;
+                    break;
+                }
+                state->state_type = TypeRef;
+                break;
+            }
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void END(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void TypeRef(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void TypeRef_one_hyphen(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = TypeRef_two_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+            }
+        default:
+            {}
+    }
+}
+
+void TypeRef_two_hyphen(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+        case lowercase:
+        case digit:
+            {
+                state->state_type = TypeRef;
+                break;
+            }
+        case hyphen:
+            {
+            }
+        case whitespace:
+            {
+            }
+        default:
+            {}
+    }
+}
+
+void Identifier(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+        case lowercase:
+        case digit:
+            {
+                state->state_type = Identifier;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = Identifier_one_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void Identifier_one_hyphen(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+        case lowercase:
+        case digit:
+            {
+                state->state_type = Identifier;
+                break;
+            }
+        case hyphen:
+            {
+                state->state_type = Identifier_two_hyphen;
+                break;
+            }
+        case whitespace:
+            {
+            }
+        default:
+            {}
+    }
+}
+
+void Identifier_two_hyphen(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case uppercase:
+        case lowercase:
+        case digit:
+            {
+                state->state_type = Identifier;
+                break;
+            }
+        case hyphen:
+            {
+            }
+        case whitespace:
+            {
+            }
+        default:
+            {}
+    }
+}
+
+void Number(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case digit:
+            {
+                state->state_type = Number;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+            }
+        default:
+            {}
+    }
+}
+
+void Zero(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case whitespace:
+            {
+                state->state_type = START;
+            }
+        default:
+            {}
+    }
+}
+
+void ASSIGN_ONE(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case colon:
+            {
+                state->state_type = ASSIGN_TWO;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void ASSIGN_TWO(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case equals:
+            {
+                state->state_type = ASSIGN_THREE;
+                break;
+            }
+        case whitespace:
+            {
+                state->state_type = START;
+            }
+        default:
+            {}
+    }
+}
+
+void ASSIGN_THREE(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case whitespace:
+            {
+                state->state_type = START;
+            }
+        default:
+            {}
+    }
+}
+
+void Range_Separator_ONE(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case period:
+            {
+                state->state_type = Range_Separator_TWO;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void Range_Separator_TWO(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case period:
+        case whitespace:
+            {
+                state->state_type = START; 
+            }
+        default:
+            {}
+    }
+}
+
+void LCURLY(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case whitespace:
+            {
+                state->state_type = START; 
+            }
+        default:
+            {}
+    }
+}
+
+void RCURLY(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case whitespace:
+            {
+                state->state_type = START; 
+            }
+        default:
+            {}
+    }
+}
+
+void COMMA(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case whitespace:
+            {
+                state->state_type = START; 
+            }
+        default:
+            {}
+    }
+}
+
+void LPAREN(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case whitespace:
+            {
+                state->state_type = START; 
+            }
+        default:
+            {}
+    }
+}
+
+void RPAREN(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case whitespace:
+            {
+                state->state_type = START; 
+            }
+        default:
+            {}
+    }
+}
