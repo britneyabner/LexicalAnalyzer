@@ -2,12 +2,6 @@
 #include <string.h>
 #include <errno.h>
 
-int main()
-{
-    return 0;
-}
-
-
 #define NUM_STATES 49
 
 struct state;
@@ -1417,4 +1411,23 @@ void RPAREN(struct state * state) {
         default:
             {}
     }
+}
+
+void test_successful() {
+    // load the content of the source code file into a string
+    FILE * code;
+    code = fopen("./TestSuccessful.txt", "r");
+    fseek(code ,0 , SEEK_END);
+    int length = ftell(code);
+    rewind(code);
+    char str[length];
+    for(int i = 0; i < length; i++) {
+        str[i] = fgetc(code);
+    }
+    fclose(code);
+}
+
+int main() {
+    test_successful();
+    return 0;
 }
