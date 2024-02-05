@@ -6,6 +6,7 @@
 
 struct state;
 enum input_type;
+struct token;
 typedef void state_type(struct state *);
 
 enum input_type get_type(char input);
@@ -24,7 +25,68 @@ typedef enum input_type {
     comma,
     lparen,
     rparen,
+    vline,
 } input_type;
+
+typedef struct token {
+    int flag;
+    char str[20];
+} token;
+
+/*
+typedef enum token {
+    Range_Separator_token,
+    ASSIGN_token,
+    LCURLY_token,
+    RCURLY_token,
+    COMMA_token,
+    LPAREN_token,
+    RPAREN_token,
+    TypeRef_token,
+    Identifier_token,
+    Number_token,
+    TAGS_token,
+    BEGIN_token,
+    SEQUENCE_token,
+    INTEGER_token,
+    DATE_token,
+    END_token,
+} token;
+
+void print_token(enum token token) {
+    char str[100];
+    switch(token) {
+        case Range_Separator_token:
+            strcpy(str, "Range_Separator");
+        case ASSIGN_token:
+            strcpy(str, "ASSIGN");
+        case LCURLY_token:
+            strcpy(str, "LCURLY");
+        case RCURLY_token:
+            strcpy(str, "RCURLY");
+        case COMMA_token:
+            strcpy(str, "COMMA");
+        case LPAREN_token:
+            strcpy(str, "LPAREN");
+        case RPAREN_token:
+            strcpy(str, "RPAREN");
+        case TypeRef_token:
+            strcpy(str, "TypeRef");
+        case Identifier_token:
+            strcpy(str, "Identifier");
+        case Number_token:
+            strcpy(str, "Number");
+        case TAGS_token:
+            strcpy(str, "TAGS");
+        case BEGIN_token:
+            strcpy(str, "BEGIN"):
+        case SEQUENCE_token:
+            strcpy(str, "SEQUENCE");
+        case INTEGER_token:
+            strcpy(str, "INTEGER");
+    }
+}
+*/
 
 // state_type points to a function that handles transitions for each state
 state_type
@@ -40,24 +102,29 @@ state_type
     Number, Zero, // 39, 40
     ASSIGN_ONE, ASSIGN_TWO, ASSIGN_THREE, // 41 ... 43
     Range_Separator_ONE, Range_Separator_TWO, // 44, 45
-    LCURLY, RCURLY, COMMA, LPAREN, RPAREN; // 46 ... 50
+    LCURLY, RCURLY, COMMA, LPAREN, RPAREN, // 46 ... 50
+    VLINE; // 51q
 
+// stores various data regarding a particular state
 typedef struct state {
     state_type  * state_type;
-    enum input_type input_type;
+    input_type input_type;
+    token token;
     char input;
-    char value[];
+    char value[100];
 } state;
 
 input_type get_input_type(char input) {
     switch(input) {
         case 0x09 ... 0x0d:
+            return whitespace;
+            break;
         case 0x20:
-                return whitespace;
-                break;
+            return whitespace;
+            break;
         case 'A' ... 'Z':
-                return uppercase;
-                break;
+            return uppercase;
+            break;
         case 'a' ... 'z':
             {
                 return lowercase;
@@ -90,6 +157,9 @@ input_type get_input_type(char input) {
         case ')':
             return rparen;
             break;
+        case '|':
+            return vline;
+            break;
         default:
             {
                 // TODO: error
@@ -97,11 +167,17 @@ input_type get_input_type(char input) {
     }
 }
 
+// The following functions represent each state in the FSM.
+// Each function handles the transitions based on the input using
+// switch statements
+// Valid final state funcitions will change the state token when a whitespace
+// is reached.
 void START(state * state) {
-    switch(state->input_type) {
+    switch(get_input_type(state->input)) {
         case whitespace:
             {
                 state->state_type = START;
+                break;
             }
         case uppercase:
             {
@@ -141,7 +217,9 @@ void START(state * state) {
                             state->state_type = TypeRef;
                             break;
                         }
+                    break;
                 }
+            break;
             }
         case lowercase:
             {
@@ -180,6 +258,16 @@ void START(state * state) {
         case lparen:
             {
                 state->state_type = LPAREN;
+                break;
+            }
+        case vline:
+            {
+                state->state_type = VLINE;
+                break;
+            }
+        case period:
+            {
+                state->state_type = Range_Separator_ONE;
                 break;
             }
         default:
@@ -291,6 +379,8 @@ void TAGS(struct state * state) {
         case whitespace:
             {
                 state->state_type = START;
+                strcpy(state->token.str, "TAGS");
+                state->token.flag = 1;
                 break;
             }
         case uppercase:
@@ -454,6 +544,8 @@ void BEGIN(struct state * state) {
         case whitespace:
             {
                 state->state_type = START;
+                strcpy(state->token.str, "BEGIN");
+                state->token.flag = 1;
                 break;
             }
         default:
@@ -704,6 +796,8 @@ void SEQUENCE(struct state * state) {
         case whitespace:
             {
                 state->state_type = START;
+                strcpy(state->token.str, "SEQUENCE");
+                state->token.flag = 1;
                 break;
             }
         default:
@@ -921,6 +1015,8 @@ void INTEGER(struct state * state) {
         case whitespace:
             {
                 state->state_type = START;
+                strcpy(state->token.str, "INTEGER");
+                state->token.flag = 1;
                 break;
             }
         default:
@@ -1041,6 +1137,8 @@ void DATE(struct state * state) {
         case whitespace:
             {
                 state->state_type = START;
+                strcpy(state->token.str, "DATE");
+                state->token.flag = 1;
                 break;
             }
         default:
@@ -1129,6 +1227,7 @@ void END(struct state * state) {
         case whitespace:
             {
                 state->state_type = START;
+                strcpy(state->token.str, "END");
                 break;
             }
         default:
@@ -1153,6 +1252,8 @@ void TypeRef(struct state * state) {
         case whitespace:
             {
                 state->state_type = START;
+                strcpy(state->token.str, "TypeRef");
+                state->token.flag = 1;
                 break;
             }
         default:
@@ -1219,6 +1320,8 @@ void Identifier(struct state * state) {
         case whitespace:
             {
                 state->state_type = START;
+                strcpy(state->token.str, "Identifier");
+                state->token.flag = 1;
                 break;
             }
         default:
@@ -1278,6 +1381,9 @@ void Number(struct state * state) {
         case whitespace:
             {
                 state->state_type = START;
+                strcpy(state->token.str, "Number");
+                state->token.flag = 1;
+                break;
             }
         default:
             {}
@@ -1289,6 +1395,9 @@ void Zero(struct state * state) {
         case whitespace:
             {
                 state->state_type = START;
+                strcpy(state->token.str, "Number");
+                state->token.flag = 1;
+                break;
             }
         default:
             {}
@@ -1328,6 +1437,8 @@ void ASSIGN_THREE(struct state * state) {
         case whitespace:
             {
                 state->state_type = START;
+                strcpy(state->token.str, "ASSIGN");
+                state->token.flag = 1;
             }
         default:
             {}
@@ -1348,10 +1459,12 @@ void Range_Separator_ONE(struct state * state) {
 
 void Range_Separator_TWO(struct state * state) {
     switch(get_input_type(state->input)) {
-        case period:
         case whitespace:
             {
                 state->state_type = START; 
+                strcpy(state->token.str, "Range_Separator");
+                state->token.flag = 1;
+                break;
             }
         default:
             {}
@@ -1363,6 +1476,9 @@ void LCURLY(struct state * state) {
         case whitespace:
             {
                 state->state_type = START; 
+                strcpy(state->token.str, "LCURLY");
+                state->token.flag = 1;
+                break;
             }
         default:
             {}
@@ -1374,6 +1490,9 @@ void RCURLY(struct state * state) {
         case whitespace:
             {
                 state->state_type = START; 
+                strcpy(state->token.str, "RCURLY");
+                state->token.flag = 1;
+                break;
             }
         default:
             {}
@@ -1385,6 +1504,9 @@ void COMMA(struct state * state) {
         case whitespace:
             {
                 state->state_type = START; 
+                strcpy(state->token.str, "COMMA");
+                state->token.flag = 1;
+                break;
             }
         default:
             {}
@@ -1396,6 +1518,9 @@ void LPAREN(struct state * state) {
         case whitespace:
             {
                 state->state_type = START; 
+                strcpy(state->token.str, "LPAREN");
+                state->token.flag = 1;
+                break;
             }
         default:
             {}
@@ -1407,6 +1532,23 @@ void RPAREN(struct state * state) {
         case whitespace:
             {
                 state->state_type = START; 
+                strcpy(state->token.str, "RPARN");
+                state->token.flag = 1;
+                break;
+            }
+        default:
+            {}
+    }
+}
+
+void VLINE(struct state * state) {
+    switch(get_input_type(state->input)) {
+        case whitespace:
+            {
+                state->state_type = START;
+                strcpy(state->token.str, "VLINE");
+                state->token.flag = 1;
+                break;
             }
         default:
             {}
@@ -1425,6 +1567,24 @@ void test_successful() {
         str[i] = fgetc(code);
     }
     fclose(code);
+
+    struct state current_state;
+    current_state.state_type = START;
+    for(int i = 0; i < length; i++) {
+        current_state.input = str[i];
+        char input_str[] = {current_state.input};
+        current_state.state_type(&current_state);
+        if(get_input_type(current_state.input) != whitespace) {
+            strcat(current_state.value, input_str);
+        }
+        if(current_state.token.flag == 1) {
+            printf("Token: %s\n Name: %s\n", current_state.token.str,
+                   current_state.value);
+            current_state.token.flag = 0;
+            current_state.token.str[0] = 0;
+            current_state.value[0] = 0;
+        }
+    }
 }
 
 int main() {
